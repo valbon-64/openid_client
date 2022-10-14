@@ -351,6 +351,8 @@ class Flow {
 
   final Map<String, String> _additionalParameters;
 
+  Map<String, String> proofKeyForCodeExchange = {};
+
   Uri redirectUri;
 
   Flow._(this.type, this.responseType, this.client,
@@ -377,6 +379,37 @@ class Flow {
       'code_verifier': verifier,
       'code_challenge': challenge
     };
+  }
+
+  Flow.withProof(
+      this.type,
+      this.responseType,
+      this.client,
+      Map<String, String> proof,
+      {String? state,
+        Map<String, String>? additionalParameters,
+        Uri? redirectUri,
+        List<String> scopes = const ['openid', 'profile', 'email']})
+      : state = state ?? _randomString(20),
+        _additionalParameters = {...?additionalParameters},
+        redirectUri = redirectUri ?? Uri.parse('http://localhost') {
+    var supportedScopes = client.issuer.metadata.scopesSupported ?? [];
+    for (var s in scopes) {
+      if (supportedScopes.contains(s)) {
+        this.scopes.add(s);
+        break;
+      }
+    }
+
+    var verifier = proof['code_verifier'];
+    var challenge = proof['code_challenge'];
+    if (verifier != null && challenge != null) {
+      _proofKeyForCodeExchange = {
+        'code_verifier': verifier,
+        'code_challenge': challenge
+      };
+      proofKeyForCodeExchange = _proofKeyForCodeExchange;
+    }
   }
 
   Flow.authorizationCode(Client client,
